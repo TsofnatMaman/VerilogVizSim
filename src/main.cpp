@@ -2,10 +2,12 @@
 #include <fstream>
 #include <sstream>
 
-#include "mvs/Version.h"
-#include "mvs/Lexer.h"
-#include "mvs/Parser.h"
-#include "mvs/AST.h"
+#include "mvs/version.h"
+#include "mvs/lexer.h"
+#include "mvs/parser.h"
+#include "mvs/ast.h"
+
+#include "mvs/algorithms.h"
 
 int main(int argc, char** argv) {
 
@@ -56,7 +58,7 @@ int main(int argc, char** argv) {
     expr->lhs = ab;
     expr->rhs = nc;
 
-    std::cout << "AST node count: " << node_count(*expr) << "\n";
+    std::cout << "AST node count: " << mvs::node_count(*expr) << "\n";
 
     return 0;
 }

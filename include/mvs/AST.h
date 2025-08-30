@@ -6,73 +6,87 @@
 
 namespace mvs
 {
-    enum class PortDir{INPUT,OUTPUT};
-
-    struct Expr{
-        virtual ~Expr() = default;
+    enum class PortDir
+    {
+        INPUT,
+        OUTPUT
     };
 
+    struct ExprIdent;
+    struct ConstExpr;
+    struct ExprUnary;
+    struct ExprBinary;
+
+    // --- Visitor interface ---
+    struct ExprVisitor
+    {
+        virtual ~ExprVisitor() = default;
+        virtual int visit(const ExprIdent &) = 0;
+        virtual int visit(const ConstExpr &) = 0;
+        virtual int visit(const ExprUnary &) = 0;
+        virtual int visit(const ExprBinary &) = 0;
+    };
+    
+    struct Expr
+    {
+        virtual ~Expr() = default;
+        virtual int accept(ExprVisitor &v) const = 0;
+    };
+
+    // --- Smart pointer type ---
     using ExprPtr = std::shared_ptr<Expr>;
 
-    struct ExprIdent : Expr{
+    // --- AST node types ---
+    struct ExprIdent : Expr
+    {
         std::string name;
+        int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
-    struct ConstExpr : Expr{
-        int value=0;
+    struct ConstExpr : Expr
+    {
+        int value = 0;
+        int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
-    struct ExprUnary : Expr{
-        char op='~';
+    struct ExprUnary : Expr
+    {
+        char op = '~';
         ExprPtr rhs;
+        int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
-    struct ExprBinary : Expr{
-        char op='&';
+    struct ExprBinary : Expr
+    {
+        char op = '&';
         ExprPtr lhs;
         ExprPtr rhs;
+        int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
-    struct Assign{
+    struct Assign
+    {
         std::string lhs;
         ExprPtr rhs;
     };
 
-    struct Port{
-        PortDir dir=PortDir::INPUT;
+    struct Port
+    {
+        PortDir dir = PortDir::INPUT;
         std::string name;
     };
 
-    struct Wire{
+    struct Wire
+    {
         std::string name;
     };
 
-    struct Module{
+    struct Module
+    {
         std::string name;
         std::vector<Port> ports;
         std::vector<Wire> wires;
         std::vector<Assign> assigns;
     };
 
-    inline int node_count(const Expr&e){
-        if(auto id = dynamic_cast<const ExprIdent*>(&e)){
-            (void)id;
-            return 1;
-        }
-
-        if(auto c = dynamic_cast<const ConstExpr*>(&e)){
-            (void)c;
-            return 1;
-        }
-
-        if(auto u = dynamic_cast<const ExprUnary*>(&e)){
-            return 1 + (u->rhs? node_count(*u->rhs):0);
-        }
-
-        if(auto b = dynamic_cast<const ExprBinary*>(&e)){
-            return 1 + (b->lhs? node_count(*b->lhs):0) + (b->rhs? node_count(*b->rhs):0);
-        }
-
-        return 0;
-    }
 }
