@@ -31,23 +31,20 @@ void Lexer::skip_space_and_comments()
         }
         else if (c == '/' && i_ + 1 < src_.size() && src_[i_ + 1] == '/')
         {
-            line_++;
-            col_ = 1;
+            while (!eof() && get() != '\n');
         }
         else if (c == '/' && i_ + 1 < src_.size() && src_[i_ + 1] == '*')
         {
-            while (!eof())
-            {
-                if (peek() != '*' || src_[i_ + 1] != '/')
-                {
-                    get();
+            get(); get();
+            while (!eof()) {
+                if (peek() == '*' && i_ + 1 < src_.size() && src_[i_ + 1] == '/') {
+                    get(); get(); 
+                    break;
                 }
+                get();
             }
         }
-        else
-        {
-            break;
-        }
+        else break;
     }
 }
 
@@ -56,5 +53,21 @@ Token Lexer::lex_identifier_or_keyword()
     int start_line = line_;
     int start_col  = col_;
 
-    
+    std::string text;
+
+    while(is_identifier_char(peek())){
+        text.push_back(get());
+    }
+
+    TokenKind kind = is_keyword(text)? TokenKind::KEYWORD : TokenKind::IDENTIFIER;
+
+    return Token{kind, text, start_line, start_col};
+}
+
+Token Lexer::lex_number(){
+    int start_line = line_;
+    int start_col = col_;
+
+    //TODO: complete
+    return Token{};
 }

@@ -45,6 +45,5 @@ namespace mvs
         Token lex_number();
         Token lex_symbol();
 
-
     };
 }
