@@ -31,10 +31,6 @@ int main(int argc, char** argv) {
     auto toks = lx.Tokenize();
 
     mvs::Parser p(toks);
-    if(p.parseModuleStub()) {
-        std::cout << "Parsed (stub) OK\n";
-    }
-
 
     // check AST building
     auto a = std::make_shared<mvs::ExprIdent>();

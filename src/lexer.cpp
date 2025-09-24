@@ -1,4 +1,4 @@
-#include "mvs/Lexer.h"
+#include "mvs/lexer.h"
 #include "mvs/utils.h"
 
 using namespace mvs;

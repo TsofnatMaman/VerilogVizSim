@@ -1,5 +1,5 @@
 #pragma once
-#include "Lexer.h"
+#include "lexer.h"
 #include "ast.h"
 #include <vector>
 #include <stdexcept>
