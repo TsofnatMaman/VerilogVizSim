@@ -1,6 +1,6 @@
-# MiniVerilogSim
+# MyVerilogSim
 
-MiniVerilogSim is a lightweight educational simulator for the Verilog Hardware Description Language (HDL).  
+MyVerilogSim is a lightweight educational simulator for the Verilog Hardware Description Language (HDL).  
 It provides a minimal yet functional environment to parse and execute simple Verilog modules,  
 with the goal of helping students and developers understand the basics of hardware simulation  
 without the complexity of full-featured tools.

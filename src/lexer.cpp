@@ -75,7 +75,7 @@ Token Lexer::lex_number() {
         raw += get();
     }
 
-    int value = parse_number(raw);  // המרה לערך אחיד
+    int value = parse_number(raw); 
 
     Token tok;
     tok.type = TokenKind::NUMBER;
