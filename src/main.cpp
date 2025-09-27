@@ -2,12 +2,12 @@
 #include <fstream>
 #include <sstream>
 
-#include "mvs/version.h"
-#include "mvs/lexer.h"
-#include "mvs/parser.h"
-#include "mvs/ast.h"
+#include "mvs/version.hpp"
+#include "mvs/lexer.hpp"
+#include "mvs/parser.hpp"
+#include "mvs/ast.hpp"
 
-#include "mvs/algorithms.h"
+#include "mvs/algorithms.hpp"
 
 int main(int argc, char** argv) {
 

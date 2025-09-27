@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mvs/ast.h"
+#include "mvs/ast.hpp"
 
 namespace mvs
 {

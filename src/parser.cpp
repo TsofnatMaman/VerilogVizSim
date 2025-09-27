@@ -1,7 +1,7 @@
 #include <stdexcept>
 
-#include "mvs/parser.h"
-#include "mvs/lexer.h"
+#include "mvs/parser.hpp"
+#include "mvs/lexer.hpp"
 
 namespace mvs
 {

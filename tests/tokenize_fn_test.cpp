@@ -1,6 +1,6 @@
 #include <iostream>
-#include "mvs/lexer.h"
-#include "mvs/utils.h"
+#include "mvs/lexer.hpp"
+#include "mvs/utils.hpp"
 
 int main() {
     using namespace mvs;

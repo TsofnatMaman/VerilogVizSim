@@ -1,5 +1,5 @@
 #pragma once
-#include "mvs/lexer.h"
+#include "mvs/lexer.hpp"
 #include <vector>
 #include <string>
 

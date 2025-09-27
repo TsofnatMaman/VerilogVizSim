@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "mvs/lexer.h"
-#include "mvs/parser.h"
+#include "mvs/lexer.hpp"
+#include "mvs/parser.hpp"
 
 TEST_CASE("Parser parses minimal module stub", "[parser]") {
     using namespace mvs;
