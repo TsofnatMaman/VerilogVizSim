@@ -51,6 +51,8 @@ TEST_CASE("Expression Parsing - Precedence and Parentheses") {
     // 1. Ensure the expression was parsed successfully
     REQUIRE(result.has_value());
     ExprPtr expr = result.value();
+
+    to_string(*expr);
     // to_string(*expr); // השאר את זה כ-Comment או השתמש בו ל-Debug
 
     // 2. The root operator should be '+' (lowest precedence)
