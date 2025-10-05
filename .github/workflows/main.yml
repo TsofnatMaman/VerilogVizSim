@@ -28,4 +28,6 @@ jobs:
 
     - name: 4. Run Tests (הרצת הטסטים)
       # שימוש ב־ctest כדי להריץ את הטסטים שהוגדרו ב־CMakeLists.txt
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure
+      run: |
+        cd ${{github.workspace}}/build
+        ctest -C Debug --output-on-failure
