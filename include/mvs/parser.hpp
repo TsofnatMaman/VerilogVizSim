@@ -26,6 +26,16 @@ namespace mvs
         bool error_ = false;
         std::string err_msg_;
 
+        std::string getErrorMessage() const
+        {
+            return err_msg_;
+        }
+
+        bool hasError() const
+        {
+            return error_;
+        }
+
         const Token &_current() const;
         void _advance();
         bool _at_end() const;

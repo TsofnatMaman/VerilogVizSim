@@ -513,7 +513,7 @@ namespace mvs
             {
                 return mod;
             }
-            else
+            else if(!_accept_symbol(";"))
             {
                 error_ = true;
                 err_msg_ = "Unexpected token in module body: " + _current().text;

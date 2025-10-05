@@ -13,7 +13,8 @@ namespace mvs
      */
     class CircuitSimulator
     {
-    private:
+        // private:
+    public:
         Module module_;
         SymbolTable symbols_;
 
@@ -49,11 +50,12 @@ namespace mvs
         {
             // Initialization: fill the map for identifier variables with default values (0)
 
+            // מאתחלים את כל הפורטים והחוטים ל-0 (כולל הפלטים והחוטים הפנימיים)
             for (const auto &port : module_.ports)
             {
-                symbols_.set_value(port.name, 0);
+                if (port.dir != PortDir::INPUT)
+                    symbols_.set_value(port.name, 0);
             }
-
             for (const auto &wire : module_.wires)
             {
                 symbols_.set_value(wire.name, 0);
