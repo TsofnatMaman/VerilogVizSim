@@ -2,6 +2,7 @@
 #include <string>
 #include <cctype>
 #include <unordered_map>
+#include <stdexcept>
 
 namespace mvs
 {
@@ -40,6 +41,8 @@ namespace mvs
         case '|':
         case '^':
         case '~':
+        case '+':
+        case '*':
             return true;
         default:
             return false;
@@ -64,6 +67,7 @@ namespace mvs
     {
         size_t i = 0;
         int width = 0;
+        bool has_base_prefix = false;
 
         // optional width
         while (i < str.size() && std::isdigit(str[i]))
@@ -71,32 +75,46 @@ namespace mvs
             width = width * 10 + (str[i] - '0');
             i++;
         }
-
-        if (i < str.size() && str[i] == '\'')
-            i++; // skip of ` char
-
-        if (i >= str.size())
-            return 0;
-
-        char base_char = std::tolower(str[i++]);
-        std::string digits = str.substr(i);
+        
+        std::string digits = str.substr(0,i);
 
         int base_int = 10;
-        switch (base_char)
+        if (i < str.size() && str[i] == '\'')
         {
-        case 'b':
-            base_int = 2;
-            break;
-        case 'h':
-            base_int = 16;
-            break;
-        default:
-            base_int = 10;
-            break;
+            i++; // skip ' char
+
+            if (i < str.size())
+            {
+                char base_char = std::tolower(static_cast<unsigned char>(str[i]));
+
+                switch (base_char)
+                {
+                case 'b':
+                    base_int = 2;
+                    break;
+                case 'h':
+                    base_int = 16;
+                    break;
+                case 'd':
+                    base_int = 10;
+                    break;
+                default:
+                    throw std::runtime_error("Invalid base character after '");
+                }
+                i++;
+            }
+            else
+            {
+                throw std::runtime_error("Missing base character after '");
+            }
         }
+
+        if (digits.empty())
+        {
+            throw std::runtime_error("Missing value digits for number parsing");
+        }
+
         return std::stoi(digits, nullptr, base_int);
-        ;
     }
-    
 
 } // namespace mvs

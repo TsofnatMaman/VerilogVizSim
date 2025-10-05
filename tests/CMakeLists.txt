@@ -1,4 +1,4 @@
-add_executable(runTests parse_module_stub_test.cpp port_list_tests.cpp)
+add_executable(runTests parse_module_stub_test.cpp port_list_tests.cpp parse_expression_tests.cpp)
 target_include_directories(runTests PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}

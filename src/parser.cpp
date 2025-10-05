@@ -69,8 +69,10 @@ namespace mvs
         return false;
     }
 
-    bool Parser::_accept_number(int &out){
-        if(!_at_end() && _current().type == TokenKind::NUMBER){
+    bool Parser::_accept_number(int &out)
+    {
+        if (!_at_end() && _current().type == TokenKind::NUMBER)
+        {
             out = _current().number_value;
             _advance();
             return true;
@@ -261,24 +263,18 @@ namespace mvs
     std::optional<ExprPtr> Parser::_parse_unary()
     {
         // 1. handle one element operator (ex ~)
-        if (_current().type == TokenKind::SYMBOL)
+        if (_current().type == TokenKind::SYMBOL && _accept_symbol("~"))
         {
-            if (_current().text == "~")
-            {
-                char op = _current().text[0];
-                _advance(); // consume the ~
+            // calc the follow expression
+            auto rhs = _parse_unary();
+            if (!rhs.has_value())
+                return std::nullopt; // error after the operator
 
-                // calc the follow expression
-                auto rhs = _parse_unary();
-                if (!rhs.has_value())
-                    return std::nullopt; // error after the operator
-
-                // build the ExprUnary node
-                auto unary = std::make_shared<ExprUnary>();
-                unary->op = op;
-                unary->rhs = std::move(rhs.value());
-                return unary;
-            }
+            // build the ExprUnary node
+            auto unary = std::make_shared<ExprUnary>();
+            unary->op = '~';
+            unary->rhs = std::move(rhs.value());
+            return unary;
         }
 
         // 2. handle identifier variables
@@ -290,9 +286,10 @@ namespace mvs
             ident->name = identifier_name;
             return ident;
         }
-        
+
         int num;
-        if(_accept_number(num)){
+        if (_accept_number(num))
+        {
             auto expr = std::make_shared<ConstExpr>();
             expr->value = num;
             return expr;
@@ -317,74 +314,55 @@ namespace mvs
         return std::nullopt;
     }
 
-    
-    int Parser::_get_precedence(const std::string &op) const
+    int Parser::_get_precedence(const char &op) const
     {
-        if (op == "*" || op == "/")
+        if (op == '^')
             return 5;
-        if (op == "+" || op == "-")
+        if (op == '*' || op == '/')
             return 4;
-        if (op == "&")
+        if (op == '+' || op == '-')
             return 3;
-        if (op == "^")
+        if (op == '&')
             return 2;
-        if (op == "|")
+        if (op == '|')
             return 1;
         return 0;
     }
 
     std::optional<ExprPtr> Parser::_parse_binary(int precedence)
     {
-        // התחל עם צד שמאל, שהוא בהכרח ביטוי יסודי/חד-איברי
+        // Start with the left-hand side, which is necessarily a fundamental/single-term expression
         auto lhs = _parse_unary();
         if (!lhs.has_value())
             return std::nullopt;
 
         while (!_at_end())
         {
-            // 1. בדוק את האופרטור הנוכחי
-            std::string op_text = _current().text;
-            int current_prec = _get_precedence(op_text);
+            // 1. check current operator
+            char op = _current().text[0];
+            int current_prec = _get_precedence(op);
 
-            // 2. קדימות: אם הקדימות נמוכה מהקדימות הנוכחית, הפסק את הניתוח הדו-איברי
-            if (current_prec < precedence)
+            // 2. Precedence: If the precedence is lower than the current precedence, stop the bipartite analysis
+            if (current_prec <= precedence)
                 break;
             if (current_prec == 0)
-                break; // לא אופרטור
+                break; // not operator
 
-            // 3. צרך את האופרטור
-            _advance(); // צרך את האופרטור (&, |, + וכו')
+            // 3. consume operator
+            _advance();
 
-            // 4. נתח את צד ימין כביטוי חד-איברי או עדיפות גבוהה יותר
-            auto rhs = _parse_unary();
+            // 4. Parse the right-hand side as a single-term expression or higher precedence
+            auto rhs = _parse_binary(current_prec);
             if (!rhs.has_value())
                 return std::nullopt;
 
-            // 5. בדוק את האופרטור הבא
-            while (!_at_end())
-            {
-                std::string next_op_text = _current().text;
-                int next_prec = _get_precedence(next_op_text);
-
-                // אם האופרטור הבא חזק יותר, או שווה (אסוציאטיביות משמאל), נתח אותו קודם
-                if (next_prec > current_prec)
-                {
-                    // נתח את שאר הביטוי (צד ימין החדש) באופן רקורסיבי
-                    rhs = _parse_binary(next_prec);
-                    if (!rhs.has_value())
-                        return std::nullopt;
-                    continue; // חזור לבדוק את האופרטור שאחריו
-                }
-                break;
-            }
-
-            // 6. בנה צומת ExprBinary חדש
+            // 5. build new node ExprBinary
             auto binary = std::make_shared<ExprBinary>();
-            binary->op = op_text[0]; // שמור את התו הראשון של האופרטור
+            binary->op = op;
             binary->lhs = std::move(lhs.value());
             binary->rhs = std::move(rhs.value());
 
-            // 7. הפוך את הביטוי החדש לצד שמאל (lhs) לסיבוב הבא של הלולאה
+            // 7. Make the new expression the left-hand side (lhs) for the next iteration of the loop
             lhs = binary;
         }
 
