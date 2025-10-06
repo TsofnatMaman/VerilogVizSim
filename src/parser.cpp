@@ -196,10 +196,10 @@ namespace mvs
                 p.dir = PortDir::INOUT;
             }
             // support ranges like [7:0], parse here:
-            std::optional<int> width = _parse_bus_width();
-            if (width.has_value())
+            std::optional<TargetBits> bus = _parse_bit_or_bus_selection();
+            if (bus.has_value())
             {
-                p.width = width.value();
+                p.width = bus.value().msb.value() - bus.value().lsb.value();
             }
 
             // Expect Port Identifier (and save its name)
@@ -233,10 +233,10 @@ namespace mvs
 
         // optional: support [] to width
         int width = 32;
-        std::optional<int> parsed_width = _parse_bus_width();
-        if (parsed_width.has_value())
+        std::optional<TargetBits> bus = _parse_bit_or_bus_selection();
+        if (bus.has_value())
         {
-            width = parsed_width.value();
+            width = bus.value().msb.value() - bus.value().lsb.value();
         }
 
         do
@@ -287,6 +287,17 @@ namespace mvs
             // this is identifier (ExprIdent)
             auto ident = std::make_shared<ExprIdent>();
             ident->name = identifier_name;
+            if (_accept_symbol("["))
+            {
+                if (!_expect_number(*ident->pos))
+                {
+                    return std::nullopt;
+                }
+                if (!_expect_symbol("]"))
+                {
+                    return std::nullopt;
+                }
+            }
             return ident;
         }
 
@@ -377,9 +388,16 @@ namespace mvs
 
         // Expect the LHS identifier (the target of the assignment)
         // NOTE: In full Verilog, this could be a concatenation, but for simplicity, we expect an identifier
-        if (!_expect_identifier(assign_stmt.lhs))
+        if (!_expect_identifier(assign_stmt.name))
         {
             return std::nullopt;
+        }
+
+        std::optional<TargetBits> bus = _parse_bit_or_bus_selection();
+        if (bus.has_value())
+        {
+            assign_stmt.tb.msb = bus.value().msb;
+            assign_stmt.tb.lsb = bus.value().lsb;
         }
 
         // Expect the assignment symbol '='
@@ -408,45 +426,42 @@ namespace mvs
         return assign_stmt;
     }
 
-    std::optional<int> Parser::_parse_bus_width()
+    std::optional<TargetBits> Parser::_parse_bit_or_bus_selection()
     {
         if (!_accept_symbol("["))
         {
             return std::nullopt;
         }
 
-        int msb = 0; // Most Significant Bit
+        int msb = 0;
         if (!_expect_number(msb))
         {
             return std::nullopt;
         }
 
-        if (!_expect_symbol(":"))
+        if (_accept_symbol(":"))
         {
-            return std::nullopt;
-        }
+            int lsb = 0;
+            if (!_expect_number(lsb))
+            {
+                return std::nullopt;
+            }
 
-        int lsb = 0; // Least Significant Bit
-        if (!_expect_number(lsb))
+            if (!_expect_symbol("]"))
+            {
+                return std::nullopt;
+            }
+
+            return TargetBits{msb, lsb};
+        }
+        else
         {
-            return std::nullopt;
+            if (!_expect_symbol("]"))
+            {
+                return std::nullopt;
+            }
+            return TargetBits{msb, msb};
         }
-
-        if (!_expect_symbol("]"))
-        {
-            return std::nullopt;
-        }
-
-        // calc width- width = MSB - LSB + 1.
-        // for example: [7:0] => 7 - 0 + 1 = 8
-        int width = msb - lsb + 1;
-        if (width <= 0)
-        {
-           _set_error("Bus width cannot be zero or negative: [" + std::to_string(msb) + ":" + std::to_string(lsb) + "]");
-            return std::nullopt;
-        }
-
-        return width;
     }
 
     std::optional<Module> Parser::parseModule()
@@ -507,7 +522,7 @@ namespace mvs
             {
                 return mod;
             }
-            else if(!_accept_symbol(";"))
+            else if (!_accept_symbol(";"))
             {
                 _set_error("Unexpected token in module body: " + _current().text);
                 return std::nullopt;

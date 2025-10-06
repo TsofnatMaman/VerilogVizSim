@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 #include <unordered_map>
 
 namespace mvs
@@ -28,7 +29,7 @@ namespace mvs
         virtual int visit(const ExprUnary &) = 0;
         virtual int visit(const ExprBinary &) = 0;
     };
-    
+
     struct Expr
     {
         virtual ~Expr() = default;
@@ -42,6 +43,7 @@ namespace mvs
     struct ExprIdent : Expr
     {
         std::string name;
+        std::optional<int> pos;
         int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
@@ -66,9 +68,17 @@ namespace mvs
         int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
+    struct TargetBits
+    {
+        std::optional<int> msb; // Most Significant Bit
+        std::optional<int> lsb; // Least Significant Bit
+    };
+
     struct Assign
     {
-        std::string lhs;
+        std::string name;
+
+        TargetBits tb;
         ExprPtr rhs;
     };
 
@@ -76,13 +86,13 @@ namespace mvs
     {
         PortDir dir = PortDir::INPUT;
         std::string name;
-        int width = 32; 
+        int width = 32;
     };
 
     struct Wire
     {
         std::string name;
-        int width = 32; 
+        int width = 32;
     };
 
     struct Module
