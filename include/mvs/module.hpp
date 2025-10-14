@@ -39,11 +39,17 @@ namespace mvs
     // --- Smart pointer type ---
     using ExprPtr = std::shared_ptr<Expr>;
 
+    struct TargetBits
+    {
+        std::optional<int> msb; // Most Significant Bit
+        std::optional<int> lsb; // Least Significant Bit
+    };
+    
     // --- AST node types ---
     struct ExprIdent : Expr
     {
         std::string name;
-        std::optional<int> pos;
+        TargetBits tb;
         int accept(ExprVisitor &v) const override { return v.visit(*this); }
     };
 
@@ -66,12 +72,6 @@ namespace mvs
         ExprPtr lhs;
         ExprPtr rhs;
         int accept(ExprVisitor &v) const override { return v.visit(*this); }
-    };
-
-    struct TargetBits
-    {
-        std::optional<int> msb; // Most Significant Bit
-        std::optional<int> lsb; // Least Significant Bit
     };
 
     struct Assign

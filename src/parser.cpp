@@ -287,17 +287,11 @@ namespace mvs
             // this is identifier (ExprIdent)
             auto ident = std::make_shared<ExprIdent>();
             ident->name = identifier_name;
-            if (_accept_symbol("["))
+            if (auto bus_opt = _parse_bit_or_bus_selection(); bus_opt.has_value())
             {
-                if (!_expect_number(*ident->pos))
-                {
-                    return std::nullopt;
-                }
-                if (!_expect_symbol("]"))
-                {
-                    return std::nullopt;
-                }
+                ident->tb = bus_opt.value();
             }
+
             return ident;
         }
 

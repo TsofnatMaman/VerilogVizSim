@@ -81,7 +81,7 @@ namespace mvs
                     int new_raw_value = assign_stmt.rhs->accept(evaluator);
 
                     // Find the bus width of the Left-Hand Side (LHS)
-                    const int target_width = get_width(assign_stmt.lhs);
+                    const int target_width = get_width(assign_stmt.name);
 
                     // Masking/Truncation to bus width: Conform value to Verilog standard
                     int truncated_new_value = new_raw_value;
@@ -94,13 +94,13 @@ namespace mvs
                     }
 
                     // Get the current value of LHS
-                    int current_value = symbols_.get_value(assign_stmt.lhs);
+                    int current_value = symbols_.get_value(assign_stmt.name);
 
                     // Check if the value changed (comparison between truncated values)
                     if (truncated_new_value != current_value)
                     {
                         // If changed: Update the Symbol Table with the truncated value
-                        symbols_.set_value(assign_stmt.lhs, truncated_new_value);
+                        symbols_.set_value(assign_stmt.name, truncated_new_value);
 
                         // Mark that a change occurred
                         changed = true;

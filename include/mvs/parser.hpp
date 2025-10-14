@@ -83,7 +83,7 @@ namespace mvs
         std::optional<ExprPtr> _parse_binary(int precedence);
         int _get_precedence(const char &op) const;
 
-        std::optional<TargetBits> Parser::_parse_bit_or_bus_selection();
+        std::optional<TargetBits> _parse_bit_or_bus_selection();
 
         bool _is_port_list_valid();
     };
