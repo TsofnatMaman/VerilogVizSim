@@ -46,8 +46,7 @@ static int sym_value(const CircuitSimulator &sim, const std::string &name)
 TEST_CASE("Simple module: single assign constant", "[parser][sim]")
 {
     const std::string src = R"(
-module simple(a);
-    output a;
+module simple(output a);
     assign a = 42;
 endmodule
 )";
