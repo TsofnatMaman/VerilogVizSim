@@ -3,6 +3,7 @@
 #include <cctype>
 #include <unordered_map>
 #include <stdexcept>
+#include <cstdint>
 
 namespace mvs
 {
@@ -69,25 +70,26 @@ namespace mvs
     inline int parse_number(const std::string &str)
     {
         size_t i = 0;
+        int width = 0;
 
         // 1. optional width
-        if (str[i] == ']')
+        if (str.find('\'') != std::string::npos)
         {
-            while (i < str.size() && std::isdigit(str[i]))
+            while (str[i] != '\'' && std::isdigit(str[i]))
+            {
+                width = width * 10 + (str[i] - '0');
                 i++;
-            if (str[i] != ']')
-                throw std::runtime_error("invalid brackets " + str);
+            }
+            i++;
         }
 
         // 2. default base = 10
         int base = 10;
 
-        if (i < str.size() && str[i] == '\'')
+        if (std::isalpha(str[i]))
         {
-            i++; // skip '
-            if (i >= str.size())
-                throw std::runtime_error("Incomplete number literal: missing base character after ' in \"" + str + "\"");
             char base_char = std::tolower(str[i++]);
+
             switch (base_char)
             {
             case 'b':
@@ -117,7 +119,15 @@ namespace mvs
         if (digits.empty())
             throw std::runtime_error("Missing value digits in number literal \"" + str + "\"");
 
-        return std::stoi(digits, nullptr, base);
+        int value = std::stoi(digits, nullptr, base);
+        if (width > 0)
+        {
+            if (width > 64)
+                throw std::runtime_error("Width " + std::to_string(width) + " too large, max 64 bits");
+            value &= ((uint64_t(1) << width) - 1);
+        }
+
+        return value;
     }
 
 } // namespace mvs

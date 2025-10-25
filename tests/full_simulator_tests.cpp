@@ -64,8 +64,7 @@ endmodule
 TEST_CASE("Chained assigns parsed from text", "[parser][chain]")
 {
     const std::string src = R"(
-module chain(a);
-    output a;
+module chain(output a);
     wire b, c;
     assign a = b + 1;
     assign b = c + 2;
@@ -86,8 +85,7 @@ endmodule
 TEST_CASE("Slice assigns from text", "[parser][slice]")
 {
     const std::string src = R"(
-module slice_test(w);
-    output [15:0] w;
+module slice_test(output [15:0] w);
     assign w[7:0] = 8'hFF;
 endmodule
 )";
@@ -104,8 +102,7 @@ endmodule
 TEST_CASE("Width truncation and bitwise ops from text", "[parser][ops]")
 {
     const std::string src = R"(
-module ops(a);
-    output [7:0] a;
+module ops(output [7:0] a);
     wire b;
     assign b = 8'b00001010;
     assign a = ~b;
@@ -124,8 +121,7 @@ endmodule
 TEST_CASE("Combined textual scenario: slices + arithmetic", "[parser][combined]")
 {
     const std::string src = R"(
-module combined(out);
-    output [15:0] out;
+module combined(output [15:0] out);
     wire [3:0] hi, lo;
     wire [7:0] in1, in2, in3;
 
@@ -154,8 +150,7 @@ endmodule
 TEST_CASE("Parser rejects malformed module", "[parser][error]")
 {
     const std::string src = R"(
-module bad(a)
-    output a;
+module bad(output a)
     assign a = ; // missing RHS
 endmodule
 )";
