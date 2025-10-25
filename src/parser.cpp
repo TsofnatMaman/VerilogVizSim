@@ -175,6 +175,7 @@ namespace mvs
         // Accept optional empty list: allow immediate ')'
         if (_accept_symbol(")"))
         {
+            _accept_symbol(";");
             return ports; // Empty list
         }
 
@@ -213,6 +214,7 @@ namespace mvs
             // After identifier: either , or )
             if (_accept_symbol(")"))
             {
+                _accept_symbol(";");
                 return ports; // End of list
             }
             if (!_expect_symbol(","))
@@ -516,8 +518,9 @@ namespace mvs
             {
                 return mod;
             }
-            else if (!_expect_symbol(";"))
+            else
             {
+                _set_error("Expected keyword " + _current().text + "is not keyword");
                 return std::nullopt;
             }
         }
