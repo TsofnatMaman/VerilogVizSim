@@ -243,7 +243,7 @@ endmodule"></textarea>
             const outputDiv = document.getElementById('output');
             
             if (!verilogCode.trim()) {
-                outputDiv.innerHTML = '<span class="error">Error: Please enter Verilog code</span>';
+                outputDiv.innerHTML = '<span class="error">❌ Error: Please enter Verilog code</span>';
                 return;
             }
             
@@ -252,30 +252,66 @@ endmodule"></textarea>
                 
                 // Wait for Module to be ready
                 if (!Module || !Module.generateNetlistJson) {
-                    outputDiv.innerHTML = '<span class="error">Error: Wasm module not yet loaded. Please refresh and try again.</span>';
+                    outputDiv.innerHTML = '<span class="error">❌ Error: Wasm module not yet loaded. Please refresh and try again.</span>';
+                    console.error('Module not ready:', Module);
                     return;
                 }
                 
                 // Call the Wasm function
-                const resultJson = Module.generateNetlistJson(verilogCode);
-                const result = JSON.parse(resultJson);
+                let resultJson;
+                try {
+                    resultJson = Module.generateNetlistJson(verilogCode);
+                } catch (wasmError) {
+                    console.error('Wasm call error:', wasmError);
+                    outputDiv.innerHTML = `<span class="error">❌ Wasm Error: ${wasmError.message || wasmError}</span>`;
+                    return;
+                }
                 
+                // Parse the result
+                let result;
+                try {
+                    result = JSON.parse(resultJson);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Raw result:', resultJson);
+                    outputDiv.innerHTML = `<span class="error">❌ Parse Error: ${parseError.message}<br>Raw output: ${resultJson}</span>`;
+                    return;
+                }
+                
+                // Check for errors in the result
                 if (result.error) {
-                    outputDiv.innerHTML = `<span class="error">Error: ${result.error}</span>`;
+                    outputDiv.innerHTML = `<span class="error">❌ Parsing Error:<br><br>${escapeHtml(result.error)}</span>`;
+                    console.error('Parse error from C++:', result.error);
+                } else if (!result.netlist) {
+                    outputDiv.innerHTML = `<span class="error">❌ Error: No netlist generated<br><br>Response: ${JSON.stringify(result, null, 2)}</span>`;
                 } else {
                     // Display raw JSON
-                    outputDiv.innerHTML = `<span class="success">✓ Analysis Complete</span>\n\n${JSON.stringify(result, null, 2)}`;
+                    outputDiv.innerHTML = `<span class="success">✓ Analysis Complete</span>\n\n<pre>${JSON.stringify(result, null, 2)}</pre>`;
                     
                     // Display netlist as table
                     if (result.netlist && result.netlist.length > 0) {
                         window.displayNetlistTable(result.netlist);
+                    } else {
+                        console.warn('Empty netlist generated');
                     }
                 }
             } catch (error) {
-                outputDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
-                console.error('Error:', error);
+                console.error('Unexpected error:', error);
+                outputDiv.innerHTML = `<span class="error">❌ Unexpected Error:<br><br>${escapeHtml(error.message || String(error))}<br><br><small>Check console for details</small></span>`;
             }
         };
+        
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
         
         window.displayNetlistTable = function(netlist) {
             const container = document.getElementById('netlsitContainer');

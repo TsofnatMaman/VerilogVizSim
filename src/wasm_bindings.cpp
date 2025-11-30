@@ -30,9 +30,17 @@ std::string generate_netlist_json(const std::string& verilog_source)
 {
     try 
     {
+        if (verilog_source.empty()) {
+            return json{{"error", "Empty Verilog source"}}.dump();
+        }
+        
         // 1. Tokenization (Lexing)
         mvs::Lexer lexer(verilog_source);
         auto tokens = lexer.Tokenize();
+        
+        if (tokens.empty()) {
+            return json{{"error", "Tokenization resulted in no tokens - possibly empty or whitespace only"}}.dump();
+        }
         
         // 2. Parsing
         mvs::Parser parser(tokens);
@@ -40,10 +48,13 @@ std::string generate_netlist_json(const std::string& verilog_source)
 
         if (!module_opt.has_value())
         {
+            std::string error_msg = "Parsing failed";
             if (parser.hasError()) {
-                throw std::runtime_error("Parsing Error: " + parser.getErrorMessage());
+                error_msg = parser.getErrorMessage();
+            } else {
+                error_msg = "Unknown parsing error - parseModule() returned empty optional";
             }
-            throw std::runtime_error("Parsing failed for unknown reason.");
+            return json{{"error", error_msg}}.dump();
         }
         
         mvs::Module module = std::move(module_opt.value());
@@ -57,12 +68,18 @@ std::string generate_netlist_json(const std::string& verilog_source)
             netlist_json.push_back(to_json(comp));
         }
 
-        return json{{"netlist", netlist_json}}.dump();
+        return json{{"success", true}, {"netlist", netlist_json}}.dump();
     }
     catch (const std::exception& e)
     {
-        // Return JSON error
-        return json{{"error", e.what()}}.dump();
+        // Return JSON error with full exception details
+        std::string error_msg = std::string(e.what());
+        return json{{"error", error_msg}}.dump();
+    }
+    catch (...)
+    {
+        // Catch all other exceptions
+        return json{{"error", "Unknown C++ exception occurred"}}.dump();
     }
 }
 
