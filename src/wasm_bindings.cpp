@@ -1,0 +1,72 @@
+#include <emscripten/bind.h>
+#include <string>
+#include <stdexcept>
+
+// 💡 נניח שהנתיך הזה עובד (אם הורדת את json.hpp)
+#include "json.hpp" 
+
+#include "mvs/lexer.hpp"
+#include "mvs/parser.hpp"
+#include "mvs/netlist_extractor.hpp"
+#include "mvs/netlist_types.hpp"
+#include "mvs/netlist_to_dot.hpp" // נדרש לשימוש ב-gateTypeToString
+
+using namespace emscripten;
+using json = nlohmann::json;
+
+// פונקציית עזר להמרת NetlistComponent ל-JSON
+json to_json(const mvs::NetlistComponent& comp)
+{
+    return json{
+        {"output", comp.output_wire},
+        {"type", mvs::NetlistToDotConverter::gateTypeToString(comp.type)},
+        {"inputs", comp.input_wires}
+        // אפשר להוסיף גם את constant_value
+    };
+}
+
+// 💡 הפונקציה המרכזית ש-JavaScript יקרא
+std::string generate_netlist_json(const std::string& verilog_source)
+{
+    try 
+    {
+        // 1. Tokenization (Lexing)
+        mvs::Lexer lexer(verilog_source);
+        auto tokens = lexer.Tokenize();
+        
+        // 2. Parsing
+        mvs::Parser parser(tokens);
+        std::optional<mvs::Module> module_opt = parser.parseModule();
+
+        if (!module_opt.has_value())
+        {
+            if (parser.hasError()) {
+                throw std::runtime_error("Parsing Error: " + parser.getErrorMessage());
+            }
+            throw std::runtime_error("Parsing failed for unknown reason.");
+        }
+        
+        mvs::Module module = std::move(module_opt.value());
+
+        // 3. Extract netlist
+        mvs::Netlist netlist = mvs::NetlistExtractor::extract(module);
+
+        // 4. Convert to JSON
+        json netlist_json = json::array();
+        for (const auto& comp : netlist) {
+            netlist_json.push_back(to_json(comp));
+        }
+
+        return json{{"netlist", netlist_json}}.dump();
+    }
+    catch (const std::exception& e)
+    {
+        // Return JSON error
+        return json{{"error", e.what()}}.dump();
+    }
+}
+
+// חשיפת הפונקציה ל-JavaScript
+EMSCRIPTEN_BINDINGS(mvs_bindings) {
+    function("generateNetlistJson", &generate_netlist_json);
+}
