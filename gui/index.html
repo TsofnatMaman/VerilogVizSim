@@ -527,6 +527,14 @@ endmodule`;
 
             const maxDepth = Math.max(0, ...Object.values(depthMemo));
 
+            // ⭐ שינוי 1: התאמת גובה ה-SVG לריווח החדש
+            const numVerticalItems = Math.max(inputs.length, netlist.length) + 1;
+            const requiredMinHeight = numVerticalItems * 60 + 120; // 60px space + margins
+            const newHeight = Math.max(height, requiredMinHeight, 800);
+            svg.setAttribute('height', newHeight);
+            // ------------------------------------
+
+
             // Column X positions: column 0 = inputs, columns 1..maxDepth = gate depths, column maxDepth+1 = outputs column
             const cols = [];
             const leftX = 60;
@@ -540,7 +548,13 @@ endmodule`;
             const topMargin = 60;
             const bottomMargin = 60;
             const availableHeight = Math.max(200, height - topMargin - bottomMargin);
-            const inputSpacing = availableHeight / (Math.max(1, inputs.length) + 1);
+
+            // ⭐ שינוי 2: הגדרת מרווח מינימלי לכניסות (40px)
+            const minSpacing = 40; 
+            const totalInputHeight = Math.max(availableHeight, inputs.length * minSpacing);
+            const inputSpacing = totalInputHeight / (Math.max(1, inputs.length) + 1);
+            // ------------------------------------
+
             inputs.forEach((inp, idx) => {
                 wireY[inp] = topMargin + (idx + 1) * inputSpacing;
             });
@@ -557,7 +571,13 @@ endmodule`;
                 const gates = gatesByDepth[d] || [];
                 const blockTop = topMargin;
                 const blockHeight = availableHeight;
-                const spacing = blockHeight / (Math.max(1, gates.length) + 1);
+                
+                // ⭐ שינוי 3: הגדרת מרווח מינימלי לשערים (60px)
+                const minGateSpacing = 60;
+                const totalGateHeight = Math.max(blockHeight, gates.length * minGateSpacing);
+                const spacing = totalGateHeight / (Math.max(1, gates.length) + 1);
+                // ------------------------------------
+                
                 gates.forEach((g, i) => {
                     const y = blockTop + (i + 1) * spacing;
                     wireY[g.output] = y;
@@ -648,7 +668,7 @@ endmodule`;
                     rail.setAttribute('y1', y);
                     rail.setAttribute('x2', xEnd);
                     rail.setAttribute('y2', y);
-                    rail.setAttribute('stroke', segmentColor[w]);
+                    rail.setAttribute('stroke', segmentColor[w]); // צבע ייחודי לחוט
                     rail.setAttribute('stroke-width', '3');
                     rail.setAttribute('stroke-linecap', 'round');
                     rail.setAttribute('data-wire', w);
@@ -1076,10 +1096,9 @@ endmodule`;
                 const wireName = line.getAttribute('data-wire');
                 if (wireName && values.hasOwnProperty(wireName)) {
                     const value = values[wireName];
-                    const color = value ? '#4CAF50' : '#f44336';
-
-                    // החל סגנון צבע
-                    line.setAttribute('stroke', color);
+                    
+                    // ⭐ שינוי מרכזי: הוסרו הקווים שדרסו את צבע ה-stroke של החוט.
+                    // רק ההילה (drop-shadow) תשתנה, וצבע החוט הייחודי יישמר.
 
                     // החל סגנון הילה (glow)
                     line.classList.remove('wire-glow-0', 'wire-glow-1');
@@ -1088,8 +1107,6 @@ endmodule`;
                     // הוספת מאזינים לטיפול בריחוף
                     line.onmouseover = (e) => showTooltip(e, wireName);
                     line.onmousemove = (e) => moveTooltip(e);
-                    line.onmouseout = () => hideTooltip();
-
                     line.onmouseout = () => {
                         // רק מפעיל טיימר, מאפשר מעבר מהיר
                         hideTimeout = setTimeout(hideTooltip, 100);
@@ -1097,13 +1114,11 @@ endmodule`;
                 }
             });
 
-            // עדכון צבעי החצים (Arrow heads)
+            // עדכון צבעי החצים (Arrow heads) - הסרת לוגיקת צביעת פוליגונים לא רלוונטיים
             svg.querySelectorAll('polygon').forEach(arrow => {
                 const wireName = arrow.getAttribute('data-wire');
                 if (wireName && values.hasOwnProperty(wireName)) {
-                    const value = values[wireName];
-                    const color = value ? '#4CAF50' : '#f44336';
-                    arrow.setAttribute('fill', color);
+                    // ⭐ הסרת הלוגיקה שמחליפה את צבע הפוליגון
                 }
             });
         }
