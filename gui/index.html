@@ -209,6 +209,13 @@
             transition: filter 0.2s;
         }
 
+        /* NEW: Highlight on click - רק משנה את ההילה לצהוב! */
+        .wire-highlight {
+            filter:
+                drop-shadow(0 0 3px rgba(255, 235, 59, 1)) drop-shadow(0 0 8px rgba(255, 235, 59, 1)) drop-shadow(0 0 14px rgba(255, 235, 59, 1)) !important;
+            cursor: pointer;
+        }
+
         #wire-tooltip {
             position: fixed;
             /* שינוי ל-fixed למיקום יציב יותר */
@@ -296,12 +303,14 @@ endmodule"></textarea>
 
         let Module = null;
 
-        // --- NEW GLOBAL STATE ---
+        // --- GLOBAL STATE ---
         let wireValues = {};
-        let wireExpressions = {}; // New: Will hold the logical expression for each wire
-        let varTooltip = null; // New: Tooltip for variables inside the expression
+        let wireExpressions = {}; // Will hold the logical expression for each wire
+        let varTooltip = null; // Tooltip for variables inside the expression
         let hideTimeout = null;
+        let highlightedWireName = null; // NEW: Tracks the currently yellow-highlighted wire
         const tooltip = document.getElementById('wire-tooltip');
+
         if (tooltip) {
             // כשנכנסים ל-Tooltip, מבטלים את טיימר הסגירה של החוט
             tooltip.onmouseover = () => {
@@ -527,14 +536,6 @@ endmodule`;
 
             const maxDepth = Math.max(0, ...Object.values(depthMemo));
 
-            // ⭐ FIX 1: Dynamic SVG Height adjustment for spacing
-            const numVerticalItems = Math.max(inputs.length, netlist.length) + 1;
-            const requiredMinHeight = numVerticalItems * 60 + 120; // 60px space + margins
-            const newHeight = Math.max(height, requiredMinHeight, 800);
-            svg.setAttribute('height', newHeight);
-            // ------------------------------------
-
-
             // Column X positions: column 0 = inputs, columns 1..maxDepth = gate depths, column maxDepth+1 = outputs column
             const cols = [];
             const leftX = 60;
@@ -548,13 +549,7 @@ endmodule`;
             const topMargin = 60;
             const bottomMargin = 60;
             const availableHeight = Math.max(200, height - topMargin - bottomMargin);
-
-            // ⭐ FIX 2: Minimum spacing for inputs
-            const minSpacing = 40;
-            const totalInputHeight = Math.max(availableHeight, inputs.length * minSpacing);
-            const inputSpacing = totalInputHeight / (Math.max(1, inputs.length) + 1);
-            // ------------------------------------
-
+            const inputSpacing = availableHeight / (Math.max(1, inputs.length) + 1);
             inputs.forEach((inp, idx) => {
                 wireY[inp] = topMargin + (idx + 1) * inputSpacing;
             });
@@ -571,19 +566,29 @@ endmodule`;
                 const gates = gatesByDepth[d] || [];
                 const blockTop = topMargin;
                 const blockHeight = availableHeight;
-
-                // ⭐ FIX 3: Minimum spacing for gates
-                const minGateSpacing = 60;
-                const totalGateHeight = Math.max(blockHeight, gates.length * minGateSpacing);
-                const spacing = totalGateHeight / (Math.max(1, gates.length) + 1);
-                // ------------------------------------
-
+                const spacing = blockHeight / (Math.max(1, gates.length) + 1);
                 gates.forEach((g, i) => {
                     const y = blockTop + (i + 1) * spacing;
                     wireY[g.output] = y;
                 });
             }
 
+            // ⭐ NEW: איחוד מיקומי Y של חוטי Identity
+            netlist.forEach(gate => {
+                if (gate.type === 'IDENTITY' && gate.inputs.length === 1) {
+                    const inputWire = gate.inputs[0];
+                    const outputWire = gate.output;
+
+                    // וודא שחוט הקלט כבר ממוקם
+                    if (wireY[inputWire] !== undefined) {
+                        // הכרח את חוט הפלט להיות באותה שורת Y כמו הקלט
+                        wireY[outputWire] = wireY[inputWire];
+                        // שנה גם את המיקום האופקי של חוט הפלט (ProducerX)
+                        // כך שהוא יתחיל מאותו מקום כמו הקלט, וכך ה-Rail יתמזג
+                        wireProducerX[outputWire] = wireProducerX[inputWire];
+                    }
+                }
+            });
             // For any wire still without Y (rare), place underneath
             let fallbackY = topMargin + availableHeight + 20;
             Array.from(allWires).forEach(w => {
@@ -668,7 +673,7 @@ endmodule`;
                     rail.setAttribute('y1', y);
                     rail.setAttribute('x2', xEnd);
                     rail.setAttribute('y2', y);
-                    rail.setAttribute('stroke', segmentColor[w]); // צבע ייחודי לחוט
+                    rail.setAttribute('stroke', segmentColor[w]); // Use unique segment color
                     rail.setAttribute('stroke-width', '3');
                     rail.setAttribute('stroke-linecap', 'round');
                     rail.setAttribute('data-wire', w);
@@ -689,34 +694,21 @@ endmodule`;
             });
 
             // Helper to draw orthogonal connection from rail to gate input
-            function connectRailToGate(wireName, gateX, gateInputY, offsetX = 0) { // <-- הוספת offsetX
+            function connectRailToGate(wireName, gateX, gateInputY, offsetX = 0) {
                 const railY = wireY[wireName];
 
                 const baseTapX = gateX - 40;
-                const railTapX = baseTapX - offsetX; // <-- החלת ההיסט
+                const railTapX = baseTapX - offsetX;
 
-                // horizontal from rail producer area to tapX
                 const color = segmentColor[wireName] || '#999';
-
-                const h = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                h.setAttribute('x1', wireProducerX[wireName] + 12);
-                h.setAttribute('y1', railY);
-                h.setAttribute('x2', railTapX);
-                h.setAttribute('y2', railY);
-                h.setAttribute('stroke', color);
-                h.setAttribute('stroke-width', '3');
-                h.setAttribute('stroke-linecap', 'round');
-                h.setAttribute('data-wire', wireName);
-                h.classList.add('wire-glow-0');
-                wiresGroup.appendChild(h);
 
                 // vertical from railTapX,railY to railTapX,gateInputY
                 const v = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 v.setAttribute('x1', railTapX);
-                v.setAttribute('y1', railY);
+                v.setAttribute('y1', railY); // מתחיל מה-Rail הראשי
                 v.setAttribute('x2', railTapX);
                 v.setAttribute('y2', gateInputY);
-                v.setAttribute('stroke', color);
+                v.setAttribute('stroke', color); // Use unique segment color
                 v.setAttribute('stroke-width', '3');
                 v.setAttribute('stroke-linecap', 'round');
                 v.setAttribute('data-wire', wireName);
@@ -729,7 +721,7 @@ endmodule`;
                 h2.setAttribute('y1', gateInputY);
                 h2.setAttribute('x2', gateX - 18);
                 h2.setAttribute('y2', gateInputY);
-                h2.setAttribute('stroke', color);
+                h2.setAttribute('stroke', color); // Use unique segment color
                 h2.setAttribute('stroke-width', '3');
                 h2.setAttribute('data-wire', wireName);
                 h2.classList.add('wire-glow-0');
@@ -739,32 +731,48 @@ endmodule`;
                 const tap = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 tap.setAttribute('cx', railTapX);
                 tap.setAttribute('cy', railY);
-                tap.setAttribute('r', '5');
+                tap.setAttribute('r', '4'); // גודל קטן יותר
                 tap.setAttribute('fill', color);
                 tap.setAttribute('stroke', '#fff');
                 tap.setAttribute('stroke-width', '1.5');
                 wiresGroup.appendChild(tap);
             }
 
+            // ⭐ NEW: Track the number of times each wire's main rail has been tapped
+            const depthLaneTracker = {};
+
             // Draw gates and connect
             netlist.forEach(gate => {
+                if (gate.type === 'IDENTITY') {
+                    return;
+                }
                 const d = depthMemo[gate.output] || 0;
                 const gX = cols[Math.min(d, cols.length - 1)];
                 const gY = wireY[gate.output];
 
-                // Draw gate inputs: compute position for each input on left side of gate
+                // הגדרת קבועים לריווח
+                const LANE_SPACING = 30; // פיקסלים בין כל קו אנכי (הגדלנו כדי ליצור אוויר)
+
+                // Draw gate inputs
                 gate.inputs.forEach((inp, idx) => {
                     const inputCount = gate.inputs.length;
                     const inputY = gY - 10 + (inputCount === 1 ? 10 : (idx * (20 / Math.max(1, inputCount - 1))));
-                    
-                    // ⭐ FIX 4: חישוב היסט X ייחודי לכל קלט
-                    const offsetX = idx * 10; // היסט של 10px לכל חוט קלט
-                    
+
+                    // לוגיקה חדשה:
+                    // במקום לבדוק כמה פעמים השתמשנו בחוט הספציפי הזה,
+                    // אנחנו בודקים כמה קווים אנכיים כבר יש בעמודה (depth) הזו באופן כללי.
+                    if (!depthLaneTracker[d]) depthLaneTracker[d] = 0;
+                    const laneIndex = depthLaneTracker[d]++;
+
+                    // חישוב ה-Offset: כל קו מקבל נתיב משלו
+                    // הוספנו 20 פיקסל בסיס כדי להרחיק קצת מהשער
+                    const totalOffsetX = 20 + (laneIndex * LANE_SPACING);
+
                     // connect rail to this gate input
-                    connectRailToGate(inp, gX, inputY, offsetX); // <-- העברת ההיסט
+                    connectRailToGate(inp, gX, inputY, totalOffsetX);
                 });
 
-                // Draw gate symbol
+                // Draw gate symbol (שאר הקוד נשאר אותו דבר)
                 drawGateSymbol(gatesGroup, gX - 22, gY - 18, gate.type, gate.output);
 
                 // Draw short output stub to rail (colored with gate's segment color)
@@ -773,7 +781,7 @@ endmodule`;
                 outStub.setAttribute('y1', gY);
                 outStub.setAttribute('x2', gX + 40);
                 outStub.setAttribute('y2', gY);
-                outStub.setAttribute('stroke', segmentColor[gate.output]);
+                outStub.setAttribute('stroke', segmentColor[gate.output]); // Use unique segment color
                 outStub.setAttribute('stroke-width', '3');
                 outStub.setAttribute('data-wire', gate.output);
                 outStub.classList.add('wire-glow-0');
@@ -1085,30 +1093,38 @@ endmodule`;
         };
 
         /**
-         * מיישם את סגנונות ההילה ומוסיף מאזינים לאינטראקציית ריחוף (Hover).
-         * מחליף את הפונקציה הישנה updateCircuitDiagramWithValues
+         * מיישם את סגנונות ההילה ומוסיף מאזינים לריחוף ולחיצה.
          * @param {Object} values - אובייקט של שם חוט -> ערך (0 או 1)
          */
         function applyStylingAndInteractions(values) {
             const svg = document.getElementById('circuitDiagram');
             if (!svg) return;
 
+            // --- NEW: Re-apply Highlight State ---
+            // שומר את מצב ההדגשה הצהובה לפני כל עדכון
+            let needsReHighlight = null;
+            if (highlightedWireName) {
+                needsReHighlight = highlightedWireName;
+                highlightedWireName = null; // מנקה זמנית
+            }
+
             // הסרת כל תוויות הערכים הישנות (מהלוגיקה הישנה)
             svg.querySelectorAll('[data-value-label]').forEach(el => el.remove());
 
-            // עדכון צבעי החוטים, הוספת הילה ומאזיני ריחוף
-            // מכוון לכל אלמנטי ה-line בקבוצות החוטים
+            // עדכון צבעי ההילה והוספת מאזיני ריחוף/לחיצה
             svg.querySelectorAll('#rails-group line, #wires-group line').forEach(line => {
                 const wireName = line.getAttribute('data-wire');
                 if (wireName && values.hasOwnProperty(wireName)) {
                     const value = values[wireName];
 
-                    // ⭐ FIX 5: הוסרו הקווים שמחליפים את צבע ה-stroke של החוט.
-                    // רק ההילה (drop-shadow) תשתנה, וצבע החוט הייחודי יישמר.
+                    // REMOVED: line.setAttribute('stroke', color); // <--- לא משנים את צבע הקו הראשי!
 
-                    // החל סגנון הילה (glow)
+                    // החל סגנון הילה (glow) לפי ערך (אדום/ירוק)
                     line.classList.remove('wire-glow-0', 'wire-glow-1');
                     line.classList.add(value ? 'wire-glow-1' : 'wire-glow-0');
+
+                    // וודא שהדגשה צהובה מוסרת (תחול שוב למטה במידת הצורך)
+                    line.classList.remove('wire-highlight');
 
                     // הוספת מאזינים לטיפול בריחוף
                     line.onmouseover = (e) => showTooltip(e, wireName);
@@ -1117,17 +1133,44 @@ endmodule`;
                         // רק מפעיל טיימר, מאפשר מעבר מהיר
                         hideTimeout = setTimeout(hideTooltip, 100);
                     };
+
+                    // NEW: הוספת מאזין לחיצה להדגשה צהובה
+                    line.onclick = (e) => window.handleWireClick(wireName);
                 }
             });
 
-            // עדכון צבעי החצים (Arrow heads) - הסרת לוגיקת צביעת פוליגונים לא רלוונטיים
-            svg.querySelectorAll('polygon').forEach(arrow => {
-                const wireName = arrow.getAttribute('data-wire');
-                if (wireName && values.hasOwnProperty(wireName)) {
-                    // ⭐ הסרת הלוגיקה שמחליפה את צבע הפוליגון
-                }
-            });
+            // Re-apply the highlight if a wire was highlighted before this function ran
+            if (needsReHighlight) {
+                // Apply highlight without toggling it off
+                svg.querySelectorAll(`#rails-group line[data-wire='${needsReHighlight}'], #wires-group line[data-wire='${needsReHighlight}']`).forEach(line => {
+                    line.classList.add('wire-highlight');
+                });
+                highlightedWireName = needsReHighlight; // Restore state
+            }
         }
+
+        // NEW: Handle wire click for yellow highlight
+        window.handleWireClick = function (wireName) {
+            const svg = document.getElementById('circuitDiagram');
+
+            // 1. Remove highlight from ALL wires
+            svg.querySelectorAll('.wire-highlight').forEach(line => {
+                line.classList.remove('wire-highlight');
+            });
+
+            // 2. Toggle the highlight state
+            if (highlightedWireName === wireName) {
+                // If clicking the currently highlighted wire, unhighlight it
+                highlightedWireName = null;
+            } else {
+                // Otherwise, highlight the new wire
+                svg.querySelectorAll(`#rails-group line[data-wire='${wireName}'], #wires-group line[data-wire='${wireName}']`).forEach(line => {
+                    line.classList.add('wire-highlight');
+                });
+                highlightedWireName = wireName;
+            }
+        };
+
 
         /**
          * מציג את ה-Tooltip הראשי עם הביטוי הלוגי.
