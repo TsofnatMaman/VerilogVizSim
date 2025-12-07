@@ -64,3 +64,88 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+let currentZoom = 1;
+
+window.zoomIn = function() {
+    const svg = document.getElementById('circuitDiagram');
+    const container = document.getElementById('diagramContainer');
+    if (!svg) return;
+    
+    currentZoom = Math.min(currentZoom * 1.2, 5); // מקסימום זום x5
+    svg.style.transform = `scale(${currentZoom})`;
+    svg.style.transformOrigin = 'top left';
+    
+    // שמירת מיקום הגלילה
+    const scrollLeft = container.scrollLeft;
+    const scrollTop = container.scrollTop;
+    
+    // התאמת גודל container
+    const width = parseFloat(svg.dataset.originalWidth || svg.getAttribute('width'));
+    const height = parseFloat(svg.dataset.originalHeight || svg.getAttribute('height'));
+    svg.style.width = (width * currentZoom) + 'px';
+    svg.style.height = (height * currentZoom) + 'px';
+    
+    // שחזור מיקום הגלילה יחסית למרכז
+    container.scrollLeft = scrollLeft * 1.2;
+    container.scrollTop = scrollTop * 1.2;
+};
+
+window.zoomOut = function() {
+    const svg = document.getElementById('circuitDiagram');
+    const container = document.getElementById('diagramContainer');
+    if (!svg) return;
+    
+    currentZoom = Math.max(currentZoom / 1.2, 0.3); // מינימום זום x0.3
+    svg.style.transform = `scale(${currentZoom})`;
+    svg.style.transformOrigin = 'top left';
+    
+    // שמירת מיקום הגלילה
+    const scrollLeft = container.scrollLeft;
+    const scrollTop = container.scrollTop;
+    
+    // התאמת גודל container
+    const width = parseFloat(svg.dataset.originalWidth || svg.getAttribute('width'));
+    const height = parseFloat(svg.dataset.originalHeight || svg.getAttribute('height'));
+    svg.style.width = (width * currentZoom) + 'px';
+    svg.style.height = (height * currentZoom) + 'px';
+    
+    // שחזור מיקום הגלילה יחסית למרכז
+    container.scrollLeft = scrollLeft / 1.2;
+    container.scrollTop = scrollTop / 1.2;
+};
+
+window.resetZoom = function() {
+    const svg = document.getElementById('circuitDiagram');
+    const container = document.getElementById('diagramContainer');
+    if (!svg) return;
+    
+    currentZoom = 1;
+    svg.style.transform = 'scale(1)';
+    
+    const width = parseFloat(svg.dataset.originalWidth || svg.getAttribute('width'));
+    const height = parseFloat(svg.dataset.originalHeight || svg.getAttribute('height'));
+    svg.style.width = width + 'px';
+    svg.style.height = height + 'px';
+    
+    // איפוס גלילה
+    container.scrollLeft = 0;
+    container.scrollTop = 0;
+};
+
+// תמיכה בזום עם גלגלת העכבר + Ctrl
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('diagramContainer');
+    if (container) {
+        container.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    window.zoomIn();
+                } else {
+                    window.zoomOut();
+                }
+            }
+        }, { passive: false });
+    }
+});

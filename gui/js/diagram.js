@@ -8,14 +8,22 @@ export function drawCircuitDiagram(netlist) {
 
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-    const width = svg.clientWidth || 1400;
-    const height = svg.clientHeight || 800;
+    const gateCount = netlist.length;
+    const inputCount = new Set(
+        netlist.flatMap(g => g.inputs.filter(inp => 
+            !netlist.some(gate => gate.output === inp)
+        ))
+    ).size;
 
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('width', width);
-    bg.setAttribute('height', height);
-    bg.setAttribute('fill', '#fafafa');
-    svg.appendChild(bg);
+    const width = Math.max(1400, gateCount * 200 + 400);
+    const height = Math.max(800, Math.max(inputCount, gateCount) * 120 + 200);
+
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    svg.dataset.originalWidth = width;
+    svg.dataset.originalHeight = height;
 
     const gatesByOutput = {};
     netlist.forEach(gate => {
